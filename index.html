@@ -1,629 +1,904 @@
-<!DOCTYPE html>  
-<html lang="ar" dir="rtl">  
-<head>  
-    <meta charset="UTF-8">  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
-    <title>GoGOTo | تطوير معاذ ابوصبيع</title>  
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">  
-    <style>  
-        /* --- المتغيرات والوضع الليلي الاحترافي --- */
-        :root {   
-            --grad: linear-gradient(135deg, #00f2fe, #4facfe); 
-            --neon: #00ff88;   
-            --bg: #0b0f19; 
-            --card: #161e2e; 
-            --text: #f1f5f9; 
-            --border: #2d3748;
-            --glass: rgba(22, 30, 46, 0.75);
-        }  
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }  
-        body { background: var(--bg); color: var(--text); padding-bottom: 80px; -webkit-tap-highlight-color: transparent; }  
-      
-        /* الهيدر الزجاجي */
-        .header { background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.05); }  
-        .header h2 { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 28px; font-weight: 900; letter-spacing: 1px; }  
-
-        .page { display: none; max-width: 600px; margin: auto; padding: 15px; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }  
-        .active { display: block; }  
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }  
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* الستوري (Stories) */
-        .stories-container { display: flex; gap: 15px; overflow-x: auto; padding: 5px 0 20px 0; margin-bottom: 15px; scrollbar-width: none; border-bottom: 1px solid var(--border); }
-        .stories-container::-webkit-scrollbar { display: none; }
-        .story-item { flex-shrink: 0; width: 72px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .story-item:active { transform: scale(0.95); }
-        .story-img { width: 68px; height: 68px; border-radius: 50%; border: 3px solid var(--neon); padding: 3px; object-fit: cover; background: var(--card); }
-        .story-name { font-size: 12px; margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cbd5e1; }
-        .add-story { border: 3px dashed #4facfe; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #4facfe; padding: 0; }
-
-        /* المنشورات والقوالب */
-        .card { background: var(--card); border-radius: 18px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }  
-        .p-head { padding: 15px; display: flex; align-items: center; gap: 12px; }  
-        .p-head img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; }  
-        .p-head-info { display: flex; flex-direction: column; }
-        .p-head-info b { font-size: 16px; color: #fff; }
-        .p-time { font-size: 12px; color: #888; margin-top: 2px; }
-
-        .p-text { padding: 15px 20px; font-size: 16px; white-space: pre-wrap; line-height: 1.6; color: #e2e8f0; }  
-        
-        /* القوالب المحسنة */
-        .tpl-blue { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; text-align: center; padding: 60px 20px !important; font-size: 24px; font-weight: bold; border-radius: 0;}  
-        .tpl-red { background: linear-gradient(135deg, #7f1d1d, #ef4444); color: white; text-align: center; padding: 60px 20px !important; font-size: 24px; font-weight: bold; border-radius: 0;}  
-        .tpl-neon { background: #000; color: var(--neon); text-align: center; padding: 60px 20px !important; border-top: 2px solid var(--neon); border-bottom: 2px solid var(--neon); text-shadow: 0 0 10px rgba(0,255,136,0.5); font-size: 24px; font-weight: bold; border-radius: 0;}  
-
-        /* أزرار التفاعل */
-        .p-actions { padding: 15px 20px; display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); }  
-        .action-btn { display: flex; align-items: center; gap: 8px; font-size: 16px; color: #94a3b8; cursor: pointer; transition: 0.2s; }
-        .action-btn i { font-size: 22px; }
-        .action-btn:active { transform: scale(0.85); color: #fff; }
-        .fa-heart.liked { color: #f43f5e; animation: pulse 0.3s ease; }  
-        @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.3);} 100% {transform: scale(1);} }
-
-        /* صفحة التعليقات المستقلة والإشعارات */
-        .full-page-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: none; flex-direction: column; animation: fadeIn 0.3s; }
-        .fp-header { padding: 15px 20px; background: var(--card); display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--border); font-size: 18px; font-weight: bold;}
-        .fp-body { flex: 1; overflow-y: auto; padding: 15px; }
-        
-        /* تصميم التعليقات */
-        .comm-item { display: flex; gap: 12px; margin-bottom: 15px; animation: slideUp 0.3s ease; }
-        .comm-item img { width: 40px; height: 40px; border-radius: 50%; }
-        .comm-bubble { background: rgba(255,255,255,0.05); padding: 12px 16px; border-radius: 0 18px 18px 18px; flex: 1; }
-        .comm-input-area { padding: 15px; background: var(--glass); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
-
-        /* ستايل المحادثة (الشات المحسن) */
-        .chat-body { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; background: #080b13; /* لون خلفية أغمق للشات */ }  
-        .msg-wrap { display: flex; flex-direction: column; max-width: 75%; animation: slideUp 0.3s ease; }
-        .msg-wrap.me { align-self: flex-end; }
-        .msg-wrap.them { align-self: flex-start; }
-        .msg { padding: 12px 16px; border-radius: 20px; line-height: 1.5; font-size: 15px; position: relative; word-wrap: break-word;}  
-        /* رسائلي */
-        .msg-wrap.me .msg { background: var(--grad); color: white; border-bottom-right-radius: 4px; box-shadow: 0 4px 10px rgba(79, 172, 254, 0.2); }  
-        /* رسائلهم */
-        .msg-wrap.them .msg { background: var(--card); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.08); border-bottom-left-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }  
-        .msg-time { font-size: 10px; color: #64748b; margin-top: 5px; padding: 0 5px; }
-        .msg-wrap.me .msg-time { text-align: right; }
-
-        /* الإعدادات والبروفايل */
-        .settings-list { margin-top: 20px; background: var(--card); border-radius: 18px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
-        .setting-item { padding: 18px 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; color: #e2e8f0; transition: 0.2s; }
-        .setting-item:hover { background: rgba(255,255,255,0.02); }
-        .setting-item i { width: 24px; font-size: 20px; text-align: center; color: var(--neon); }
-        .setting-item:last-child { border-bottom: none; }
-
-        /* شريط التنقل السفلي */
-        .nav { position: fixed; bottom: 0; width: 100%; background: var(--glass); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); display: flex; justify-content: space-around; padding: 10px 5px 15px 5px; border-top: 1px solid rgba(255,255,255,0.08); z-index: 1000; }  
-        .nav i { font-size: 24px; color: #64748b; cursor: pointer; transition: 0.3s; padding: 12px; border-radius: 16px;}  
-        .nav i.active { color: var(--neon); background: rgba(0, 255, 136, 0.1); transform: translateY(-3px); }  
-
-        .btn { background: var(--grad); color: white; border: none; padding: 14px; border-radius: 14px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; transition: 0.2s; }  
-        .btn:active { transform: scale(0.98); opacity: 0.9; }
-        input, textarea { width: 100%; padding: 15px; border-radius: 14px; background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.1); outline: none; font-size: 15px; transition: 0.3s; }
-        input:focus, textarea:focus { border-color: #4facfe; background: rgba(0,0,0,0.5); }
-        
-        /* الإشعارات */
-        .notif-item { background: var(--card); padding: 15px; border-radius: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; border: 1px solid rgba(255,255,255,0.05); }
-    </style>
-</head>  
-<body>  
-
-<div id="app" style="display:none">  
-    <div class="header">  
-        <h2 onclick="location.reload()">GoGOTo</h2>  
-        <i class="fa-solid fa-comment-dots" onclick="openPage('chats')" style="color: var(--neon); font-size: 26px; cursor:pointer"></i>  
-    </div>
-
-    <div id="home" class="page active">
-        <div class="stories-container" id="storiesBox">
-            <div class="story-item" onclick="addStory()">
-                <div class="story-img add-story"><i class="fa-solid fa-plus"></i></div>
-                <div class="story-name">إضافتي</div>
-            </div>
-            </div>
-        <div id="feed"></div>
-    </div>  
-
-    <div id="notifications" class="page">
-        <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-            <i class="fa-solid fa-arrow-right" onclick="openPage('home')" style="font-size:20px; cursor:pointer;"></i>
-            <h2 style="font-size: 22px;">الإشعارات</h2>
-        </div>
-        <div id="notifList"></div>
-    </div>
-
-    <div id="create" class="page">  
-        <div class="card" style="padding:20px;">  
-            <h3 style="margin-bottom: 15px; color: var(--neon);">إنشاء منشور جديد</h3>
-            <div id="previewBox" class="p-text" style="border-radius:14px; margin-bottom:15px; display:none;"></div>
-
-            <textarea id="pTxt" placeholder="بماذا تفكر يا صديقي؟" rows="4" oninput="updatePreview()"></textarea>  
-            
-            <p style="margin: 15px 0 10px 0; font-size: 14px; color: #888;">اختر قالباً مميزاً (اختياري):</p>
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <button onclick="setTpl('tpl-blue')" style="background:#3b82f6; border:none; color:white; padding:12px; border-radius:10px; flex:1; cursor:pointer">أزرق</button>
-                <button onclick="setTpl('tpl-red')" style="background:#ef4444; border:none; color:white; padding:12px; border-radius:10px; flex:1; cursor:pointer">أحمر</button>
-                <button onclick="setTpl('tpl-neon')" style="background:#000; border:1px solid var(--neon); color:var(--neon); padding:12px; border-radius:10px; flex:1; cursor:pointer">نيون</button>
-                <button onclick="setTpl('')" style="background:#334155; border:none; color:white; padding:12px; border-radius:10px; flex:1; cursor:pointer">بدون</button>
-            </div>
-
-            <button class="btn" onclick="publishPost()"><i class="fa-solid fa-paper-plane"></i> نشر الآن</button>  
-        </div>  
-    </div>  
-
-    <div id="chats" class="page">
-        <div style="position:relative; margin-bottom:20px;">
-            <i class="fa-solid fa-search" style="position:absolute; right:15px; top:18px; color:#888;"></i>
-            <input id="uSearch" placeholder="ابحث عن أصدقاء..." oninput="searchUsers(this.value)" style="padding-right:45px;">
-        </div>
-        <div id="uList"></div>
-    </div>  
-
-    <div id="profile" class="page" style="text-align:center;">  
-        <img id="uPic" style="width:120px; height:120px; border-radius:50%; border:4px solid var(--neon); padding:4px; box-shadow: 0 0 20px rgba(0,255,136,0.2);">  
-        <h2 id="uName" style="margin-top:15px; font-size: 24px;"></h2>
-        <p style="color:#888; font-size:15px; margin-bottom:20px;">@<span id="uHandle"></span></p>
-
-        <button class="btn" onclick="openPage('settings')" style="background:var(--card); border:1px solid rgba(255,255,255,0.1); color:white; width:auto; padding:10px 30px;"><i class="fa-solid fa-gear"></i> الإعدادات</button>
-        
-        <hr style="margin:30px 0; border:none; border-top:1px solid rgba(255,255,255,0.05);">
-        <h3 style="text-align:right; margin-bottom:15px; padding-right:5px; color:#cbd5e1;">منشوراتي</h3>
-        <div id="myPosts"></div>
-    </div>
-
-    <div id="settings" class="page">
-        <div style="display:flex; align-items:center; gap:15px; margin-bottom:20px;">
-            <i class="fa-solid fa-arrow-right" onclick="openPage('profile')" style="font-size:20px; cursor:pointer;"></i>
-            <h2 style="font-size: 22px;">الإعدادات</h2>
-        </div>
-        
-        <div class="settings-list">
-            <div class="setting-item">
-                <i class="fa-solid fa-code"></i>
-                <div>
-                    <b style="font-size: 16px;">المطور</b>
-                    <p style="font-size:13px; color:#888; margin-top:3px;">معاذ ابوصبيع (Muadh Abu Sbi')</p>
-                </div>
-            </div>
-            <div class="setting-item">
-                <i class="fa-solid fa-shield-halved"></i>
-                <div>
-                    <b style="font-size: 16px;">سياسة الخصوصية</b>
-                    <p style="font-size:13px; color:#888; margin-top:3px;">نحن نحترم خصوصية بياناتك.</p>
-                </div>
-            </div>
-            <div class="setting-item">
-                <i class="fa-solid fa-moon"></i>
-                <div>
-                    <b style="font-size: 16px;">المظهر</b>
-                    <p style="font-size:13px; color:#888; margin-top:3px;">الوضع الليلي الاحترافي (مفعل)</p>
-                </div>
-            </div>
-            <div class="setting-item" onclick="auth.signOut()" style="color:#ef4444;">
-                <i class="fa-solid fa-right-from-bracket" style="color:#ef4444;"></i>
-                <b style="font-size: 16px;">تسجيل الخروج</b>
-            </div>
-        </div>
-        <p style="text-align:center; margin-top:40px; color:#475569; font-size:13px; letter-spacing: 1px;">GoGOTo v2.5 - All Rights Reserved</p>
-    </div>
-
-    <div id="storyView" style="position:fixed; inset:0; background:#000; z-index:4000; display:none; flex-direction:column;">
-        <div style="padding: 20px; display:flex; align-items:center; gap:10px; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);">
-            <div style="flex:1; height:3px; background:rgba(255,255,255,0.3); border-radius:3px; overflow: hidden;">
-                <div id="storyProgress" style="width:0%; height:100%; background:#fff;"></div>
-            </div>
-            <i class="fa-solid fa-xmark" onclick="closeStory()" style="color:#fff; font-size:28px; cursor:pointer; margin-right: 10px;"></i>
-        </div>
-        <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 20px;">
-            <img id="storyUserPic" src="" style="width:70px; height:70px; border-radius:50%; border:3px solid var(--neon); box-shadow: 0 0 20px rgba(0,255,136,0.3); margin-bottom: 15px;">
-            <h3 id="storyUserName" style="color:#fff; margin-bottom: 30px; font-size: 18px; opacity: 0.9;"></h3>
-            <div id="storyText" style="color:#fff; font-size:28px; font-weight:bold; text-align: center; line-height: 1.5; padding: 0 20px;"></div>
-        </div>
-    </div>
-
-    <div id="commentsPage" class="full-page-overlay">
-        <div class="fp-header">
-            <i class="fa-solid fa-arrow-right" style="cursor:pointer;" onclick="closeComments()"></i>
-            <span>التعليقات</span>
-        </div>
-        <div id="mainPostView" style="padding:15px; border-bottom:8px solid var(--bg); background:var(--card);"></div>
-        <div class="fp-body" id="commentsList"></div>
-        <div class="comm-input-area">
-            <input id="newCommTxt" placeholder="اكتب تعليقاً..." style="border-radius: 20px; padding: 12px 20px;">
-            <button class="btn" style="width:50px; height:50px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;" onclick="sendComment()"><i class="fa-solid fa-paper-plane"></i></button>
-        </div>
-    </div>
-
-    <div id="chatWin" class="full-page-overlay">  
-        <div class="fp-header" style="border-bottom:1px solid rgba(255,255,255,0.05);">  
-            <div style="display:flex; align-items:center; gap:15px;">
-                <i class="fa-solid fa-arrow-right" onclick="closeChat()" style="cursor:pointer; font-size:20px;"></i>  
-                <img id="cPic" src="" style="width:42px; height:42px; border-radius:50%; object-fit: cover;">
-                <b id="cName" style="font-size:18px;"></b>  
-            </div>
-        </div>  
-        <div id="msgBox" class="chat-body"></div>  
-        <div style="padding:15px; display:flex; gap:10px; background:var(--card); border-top:1px solid rgba(255,255,255,0.05); align-items: center;">  
-            <input id="msgInp" placeholder="مراسلة..." onkeydown="if(event.key==='Enter') sendMsg()" style="border-radius: 20px; padding: 12px 20px;">  
-            <button class="btn" style="width:50px; height:50px; border-radius:50%; padding:0; display:flex; align-items:center; justify-content:center;" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>  
-        </div>  
-    </div>  
-
-    <nav class="nav">  
-        <i class="fa-solid fa-house active" onclick="openPage('home',this)"></i>  
-        <i class="fa-solid fa-magnifying-glass" onclick="openPage('chats',this)"></i>  
-        <i class="fa-solid fa-circle-plus" onclick="openPage('create',this)" style="color:var(--neon); font-size:36px; transform:translateY(-8px); box-shadow: 0 5px 15px rgba(0,255,136,0.2);"></i>  
-        <i class="fa-solid fa-bell" onclick="openPage('notifications', this)"></i>
-        <i class="fa-solid fa-user" onclick="openPage('profile',this)"></i>  
-    </nav>
-</div>
-
-<div id="loginPage" style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:fixed; inset:0; background:var(--bg); z-index:3000;">  
-    <h1 style="color:var(--neon); font-size:65px; font-weight: 900; letter-spacing: 2px; text-shadow:0 0 20px rgba(0,255,136,0.5); margin-bottom:10px;">GoGOTo</h1>  
-    <p style="color:#94a3b8; font-size:15px; margin-bottom:50px; letter-spacing: 1px;">طور بـ ❤️ بواسطة معاذ ابوصبيع</p>
-    <button class="btn" onclick="login()" style="width:auto; padding:16px 45px; font-size:18px; display:flex; align-items:center; gap:12px; border-radius: 30px; box-shadow: 0 10px 20px rgba(0, 242, 254, 0.3);"><i class="fa-brands fa-google"></i> الدخول باستخدام جوجل</button>  
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>  
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>  
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>  
-
-<script>  
-// إعدادات Firebase
-const firebaseConfig = {  
-  apiKey: "AIzaSyCputZ6t49xHgKG5hzaPgGCl72Vj8yxd_g",  
-  authDomain: "gogoto-dfbb4.firebaseapp.com",  
-  databaseURL: "https://gogoto-dfbb4-default-rtdb.firebaseio.com",  
-  projectId: "gogoto-dfbb4",  
-  appId: "1:494284825885:web:27600b80e2089703266df4"  
-};  
-firebase.initializeApp(firebaseConfig);  
-const auth = firebase.auth(), db = firebase.database();  
-
-let user = null, currentChatID = null, selectedTpl = "", currentPostId = null;
-
-  auth.onAuthStateChanged(u => {  
-    if(u) {  
-        user = u; 
-        document.getElementById('loginPage').style.display='none'; 
-        document.getElementById('app').style.display='block';  
-        document.getElementById('uPic').src = u.photoURL; 
-        document.getElementById('uName').innerText = u.displayName;  
-        document.getElementById('uHandle').innerText = u.email.split('@')[0];
-        
-        db.ref('users/'+u.uid).update({ name:u.displayName, pic:u.photoURL, uid:u.uid });  
-        loadFeed(); loadUsers(); loadStories();
-    } else { 
-        document.getElementById('loginPage').style.display='flex'; 
-        document.getElementById('app').style.display='none'; 
-    }  
-});  
-
-function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }  
-
-function openPage(id, el) {  
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));  
-    const targetPage = document.getElementById(id);
-    if(targetPage) targetPage.classList.add('active');  
-    
-    if(el) { 
-        document.querySelectorAll('.nav i').forEach(i=>i.classList.remove('active')); 
-        el.classList.add('active'); 
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>GoGOTo · تواصل إسلامي احترافي</title>
+  <!-- خطوط عربية -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=El+Messiri:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ========== متغيرات الألوان ========== */
+    :root {
+      --green: #0a7e32; --gold: #d4af37; --red: #dc2626;
+      --bg: #f8faf8; --card: #ffffff; --text: #1e2a1e; --border: #dde5d0;
+      --shadow: 0 8px 20px rgba(0,0,0,0.04); --header-height: 65px; --nav-height: 75px;
     }
-    
-    if(id === 'notifications') loadNotifications();
-    if(id === 'profile') loadUserPosts(user.uid, 'myPosts');
-}
+    body.dark-mode {
+      --bg: #0e1a1a; --card: #1a2a2a; --text: #eaf4e4; --border: #2a3e3a;
+      --shadow: 0 8px 20px rgba(0,0,0,0.3);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; }
+    body { background: var(--bg); color: var(--text); padding-bottom: var(--nav-height); transition: background 0.2s; line-height: 1.5; -webkit-tap-highlight-color: transparent; }
+    .app { max-width: 680px; margin: 0 auto; min-height: 100vh; position: relative; }
 
-// تنسيق الوقت
-function formatTime(ms) {
-    const d = new Date(ms);
-    return d.getHours() + ':' + (d.getMinutes()<10?'0':'') + d.getMinutes() + ' - ' + d.getDate() + '/' + (d.getMonth()+1);
-}
+    /* ========== الهيدر ========== */
+    .header { background: var(--card); padding: 0 18px; height: var(--header-height); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border); backdrop-filter: blur(10px); }
+    .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .logo i { font-size: 28px; color: var(--green); }
+    .logo span { font-size: 24px; font-weight: 900; color: var(--green); }
+    .prayer-badge { background: rgba(10,126,50,0.1); padding: 6px 16px; border-radius: 40px; font-weight: 600; color: var(--green); border: 1px solid var(--green); cursor: pointer; }
 
-// --- نظام القوالب والنشر المطور ---
-function setTpl(t) { 
-    selectedTpl = t; 
-    updatePreview();
-}
-function updatePreview() {
-    const txt = document.getElementById('pTxt').value;
-    const box = document.getElementById('previewBox');
-    if(txt || selectedTpl) {
-        box.style.display = 'block';
-        box.className = 'p-text ' + selectedTpl;
-        box.innerText = txt || "معاينة المنشور هنا...";
+    /* ========== الصفحات ========== */
+    .page { display: none; padding: 16px 12px; animation: fadeSlide 0.25s; }
+    .page.active { display: block; }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ========== القصص ========== */
+    .stories { display: flex; gap: 14px; overflow-x: auto; padding: 10px 4px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; scrollbar-width: none; }
+    .story { flex-shrink: 0; width: 76px; text-align: center; cursor: pointer; }
+    .story-img { width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--gold); padding: 2px; object-fit: cover; background: var(--card); }
+    .add-story { border: 3px dashed var(--green); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--green); }
+
+    /* ========== بطاقة المنشور (بدون قص للطول) ========== */
+    .post-card { background: var(--card); border-radius: 24px; margin-bottom: 22px; border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow); transition: transform 0.2s, box-shadow 0.2s; }
+    .post-card:active { transform: scale(0.99); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .post-header { padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+    .post-header img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; cursor: pointer; }
+    .post-author { flex: 1; }
+    .post-author b { font-size: 16px; font-weight: 700; cursor: pointer; }
+    .post-location { font-size: 12px; opacity: 0.7; }
+    .post-text { padding: 0 16px 16px; white-space: pre-wrap; line-height: 1.6; word-break: break-word; }
+    .post-image img { width: 100%; height: auto; display: block; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .post-actions { padding: 10px 16px; display: flex; justify-content: space-around; border-top: 1px solid var(--border); }
+    .action-btn { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 30px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+    .action-btn:active { background: rgba(10,126,50,0.1); transform: scale(0.96); }
+    .liked { color: #e53e3e; }
+    .template-islamic { background: linear-gradient(145deg, #0a7e32, #1e9e4a); color: white; padding: 20px; text-align: center; font-weight: bold; }
+    .template-gold { background: linear-gradient(145deg, #b8860b, #d4af37); color: #0b1a1a; padding: 20px; text-align: center; font-weight: bold; }
+
+    /* ========== أزرار ونماذج ========== */
+    .btn { background: var(--green); color: white; border: none; padding: 14px; border-radius: 40px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; transition: 0.2s; }
+    .btn:active { transform: scale(0.98); }
+    .btn-gold { background: var(--gold); color: #0b1a1a; }
+    .btn-outline { background: transparent; border: 2px solid var(--green); color: var(--green); }
+    input, textarea, select { width: 100%; padding: 15px; border-radius: 20px; background: var(--bg); color: var(--text); border: 1.5px solid var(--border); outline: none; font-size: 15px; margin-bottom: 12px; }
+    input:focus, textarea:focus { border-color: var(--green); }
+
+    /* ========== شريط التنقل ========== */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; max-width: 680px; margin: 0 auto; background: var(--card); display: flex; justify-content: space-around; padding: 8px 12px 14px; border-top: 1px solid var(--border); border-radius: 30px 30px 0 0; backdrop-filter: blur(10px); z-index: 90; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; color: #6b7a6b; font-size: 12px; cursor: pointer; transition: 0.2s; padding: 6px 12px; border-radius: 40px; }
+    .nav-item i { font-size: 24px; margin-bottom: 4px; }
+    .nav-item.active { color: var(--green); background: rgba(10,126,50,0.08); }
+    .nav-item:active { transform: scale(0.9); }
+
+    /* ========== النوافذ المنبثقة ========== */
+    .overlay { position: fixed; inset: 0; background: var(--bg); z-index: 200; display: none; flex-direction: column; animation: fadeSlide 0.2s; }
+    .overlay-header { padding: 16px 20px; background: var(--card); display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 18px; }
+    .overlay-body { flex: 1; overflow-y: auto; padding: 16px; }
+    .overlay-footer { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+
+    /* ========== المراسلة ========== */
+    .chat-message { display: flex; margin-bottom: 16px; }
+    .chat-message.sent { justify-content: flex-end; }
+    .chat-bubble { max-width: 75%; padding: 14px 18px; border-radius: 24px; }
+    .sent .chat-bubble { background: var(--green); color: white; border-bottom-left-radius: 6px; }
+    .received .chat-bubble { background: var(--card); border: 1px solid var(--border); border-bottom-right-radius: 6px; }
+    .chat-image { max-width: 200px; border-radius: 16px; margin: 5px 0; }
+
+    /* ========== Skeleton Loading ========== */
+    .skeleton-card { background: var(--card); border-radius: 24px; padding: 16px; margin-bottom: 20px; animation: pulse 1.5s infinite; }
+    .skeleton-avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--border); }
+    .skeleton-line { height: 16px; background: var(--border); margin: 12px 0; border-radius: 8px; width: 70%; }
+    .skeleton-image { height: 250px; background: var(--border); border-radius: 16px; margin-top: 12px; }
+    @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+
+    /* ========== الإعدادات ========== */
+    .settings-group { background: var(--card); border-radius: 24px; padding: 8px 0; margin-bottom: 24px; border: 1px solid var(--border); }
+    .settings-item { padding: 18px 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .settings-item:last-child { border-bottom: none; }
+    .toggle-switch { width: 50px; height: 26px; background: #ccc; border-radius: 30px; position: relative; transition: 0.3s; }
+    .toggle-switch.active { background: var(--green); }
+    .toggle-switch::after { content: ''; position: absolute; width: 22px; height: 22px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
+    .toggle-switch.active::after { left: 26px; }
+
+    /* إضافات جديدة */
+    .badge { background: var(--gold); color: #0b1a1a; padding: 2px 8px; border-radius: 20px; font-size: 12px; margin-right: 4px; }
+    .online-dot { width: 10px; height: 10px; background: #4caf50; border-radius: 50%; display: inline-block; margin-left: 5px; }
+    .typing-indicator { font-size: 13px; color: var(--green); padding: 0 10px; }
+    .suggestions { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; }
+  </style>
+</head>
+<body>
+<!-- شاشة تسجيل الدخول -->
+<div id="loginScreen" style="display:flex; flex-direction:column; align-items:center; justify-content:center; position:fixed; inset:0; background:var(--bg); z-index:1000;">
+  <i class="fa-solid fa-mosque" style="font-size:70px; color:var(--green); margin-bottom:24px;"></i>
+  <h1 style="font-size:52px; color:var(--green);">GoGOTo</h1>
+  <p style="color:var(--gold); margin-bottom:32px;">تواصل بروح إسلامية</p>
+  <button class="btn" style="width:auto; padding:16px 56px;" onclick="login()"><i class="fa-brands fa-google"></i> تسجيل الدخول</button>
+  <p style="margin-top:48px; opacity:0.6;">تطوير معاذ ابوصبيع</p>
+</div>
+
+<!-- التطبيق الرئيسي -->
+<div id="app" class="app" style="display:none;">
+  <div class="header">
+    <div class="logo" onclick="openPage('home')"><i class="fa-solid fa-star-and-crescent"></i><span>GoGOTo</span></div>
+    <div class="prayer-badge" onclick="openPage('islamic')"><i class="fa-regular fa-clock"></i> <span id="nextPrayer">الظهر 12:30</span></div>
+  </div>
+
+  <!-- ========== الصفحات ========== -->
+  <!-- الرئيسية -->
+  <div id="home" class="page active">
+    <div class="stories" id="storiesContainer"></div>
+    <!-- اقتراحات متابعين -->
+    <div id="suggestionsContainer" class="suggestions"></div>
+    <div id="feedContainer"></div>
+  </div>
+
+  <!-- ريلز (صور) -->
+  <div id="reels" class="page">
+    <h3 style="margin-bottom:16px;"><i class="fa-regular fa-images" style="color:var(--gold);"></i> معرض الصور</h3>
+    <div id="reelsContainer"></div>
+  </div>
+
+  <!-- بحث -->
+  <div id="search" class="page">
+    <h3>🔍 بحث</h3>
+    <input type="text" id="searchInput" placeholder="ابحث عن مستخدمين أو منشورات..." oninput="performSearch(this.value)">
+    <div id="searchResults"></div>
+  </div>
+
+  <!-- إسلاميات -->
+  <div id="islamic" class="page">
+    <h3><i class="fa-solid fa-mosque"></i> إسلاميــات</h3>
+    <div class="post-card" style="padding:18px; margin-bottom:20px; background: linear-gradient(145deg, #0a7e32, #1e9e4a); color:white;">
+      <b>🕌 أوقات الصلاة - <span id="prayerCity">مكة المكرمة</span></b>
+      <div id="prayerTimesList" style="margin-top:12px;"></div>
+    </div>
+    <div class="post-card" style="padding:18px; margin-bottom:20px;">
+      <b>📖 آية اليوم</b>
+      <p id="ayahDisplay">وَجَعَلْنَا مِنْ بَيْنِ أَيْدِيهِمْ سَدًّا...</p>
+    </div>
+    <div class="post-card" style="padding:18px; margin-bottom:20px;">
+      <b>🤲 حديث شريف</b>
+      <p id="hadithDisplay">"إنما الأعمال بالنيات..."</p>
+    </div>
+    <div style="display:flex; justify-content:space-between; margin:20px 0 12px;">
+      <h4>💡 نصائح المجتمع</h4>
+      <button class="btn" style="width:auto; padding:8px 20px;" onclick="openAddAdvice()">+ أضف نصيحة</button>
+    </div>
+    <div id="adviceList"></div>
+    <div class="post-card" style="padding:18px; margin-top:20px;">
+      <b>✨ أجرك: <span id="ajrCount">0</span></b>
+      <progress id="ajrProgress" value="0" max="100" style="width:100%; height:10px; border-radius:10px; margin:12px 0;"></progress>
+      <p>كل 100 أجر = توثيق ✨</p>
+    </div>
+    <button class="btn btn-gold" onclick="startDhikr()"><i class="fa-regular fa-hand-peace"></i> سبحة إلكترونية</button>
+  </div>
+
+  <!-- الإشعارات -->
+  <div id="notifications" class="page">
+    <h3>🔔 الإشعارات</h3>
+    <div id="notifList"></div>
+  </div>
+
+  <!-- الملف الشخصي -->
+  <div id="profile" class="page" style="text-align:center;">
+    <img id="profilePic" style="width:110px; height:110px; border-radius:50%; border:4px solid var(--gold); object-fit:cover;" onerror="this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(document.getElementById('profileName').innerText || 'User') + '&background=0a7e32&color=fff'">
+    <h2 id="profileName"></h2>
+    <p id="profileHandle"></p>
+    <p><i class="fa-regular fa-location-dot"></i> <span id="profileCityCountry"></span></p>
+    <p id="profileBio" style="margin:8px 0;"></p>
+    <div id="profileBadges" style="margin:10px 0;"></div>
+    <div style="display:flex; gap:24px; justify-content:center; margin:16px 0;">
+      <div><b id="followersCount">0</b><br>أجر</div>
+      <div><b id="followingCount">0</b><br>يتابع</div>
+      <div><b id="ajrProfile">0</b><br>أجر</div>
+    </div>
+    <div id="followBtnContainer"></div>
+    <hr style="margin:24px 0; border-color:var(--border);">
+    <h4 style="text-align:right;">إحصائيات</h4>
+    <div style="display:flex; justify-content:space-around; margin:15px 0;">
+      <div><b id="statsPosts">0</b><br>منشورات</div>
+      <div><b id="statsLikes">0</b><br>إعجابات</div>
+    </div>
+    <h4 style="text-align:right;">منشوراتي</h4>
+    <div id="myPostsList"></div>
+    <button class="btn btn-outline" style="margin-top:20px;" onclick="openPage('settings')"><i class="fa-regular fa-gear"></i> الإعدادات</button>
+  </div>
+
+  <!-- الإعدادات -->
+  <div id="settings" class="page">
+    <h3>⚙️ الإعدادات</h3>
+    <div class="settings-group">
+      <div class="settings-item" onclick="openEditProfile()"><i class="fa-regular fa-pen-to-square"></i> تعديل الملف الشخصي</div>
+      <div class="settings-item" onclick="changeLocation()"><i class="fa-regular fa-location-dot"></i> تغيير الموقع</div>
+      <div class="settings-item" onclick="toggleDarkMode()"><i class="fa-regular fa-moon"></i> الوضع الليلي <div id="darkModeToggle" class="toggle-switch"></div></div>
+      <div class="settings-item" onclick="changeLanguage()"><i class="fa-regular fa-language"></i> اللغة</div>
+    </div>
+    <div class="settings-group">
+      <div class="settings-item" onclick="manageBlockedUsers()"><i class="fa-regular fa-ban"></i> المستخدمون المحظورون</div>
+      <div class="settings-item" onclick="auth.signOut()" style="color:var(--red);"><i class="fa-regular fa-right-from-bracket"></i> تسجيل الخروج</div>
+    </div>
+  </div>
+
+  <!-- صندوق الوارد (المحادثات) -->
+  <div id="inbox" class="page">
+    <h3>💬 المحادثات</h3>
+    <div id="chatList"></div>
+  </div>
+
+  <!-- ========== النوافذ المنبثقة ========== -->
+  <!-- إنشاء منشور -->
+  <div id="createPostModal" class="overlay">
+    <div class="overlay-header"><i class="fa-solid fa-arrow-right" onclick="closeCreatePost()"></i> منشور جديد</div>
+    <div class="overlay-body">
+      <textarea id="postTextInput" placeholder="بماذا تفكر؟" rows="4"></textarea>
+      <input type="file" id="postImageInput" accept="image/*">
+      <select id="postTemplate"><option value="">بدون قالب</option><option value="template-islamic">إسلامي</option><option value="template-gold">ذهبي</option></select>
+      <select id="postIntention"><option value="دعوة">دعوة</option><option value="نصيحة">نصيحة</option><option value="تعليم">تعليم</option></select>
+      <button class="btn" style="margin-top:16px;" onclick="publishPost()">نشر</button>
+    </div>
+  </div>
+
+  <!-- إضافة نصيحة -->
+  <div id="addAdviceModal" class="overlay">
+    <div class="overlay-header"><i class="fa-solid fa-arrow-right" onclick="closeAddAdvice()"></i> أضف نصيحة</div>
+    <div class="overlay-body">
+      <textarea id="adviceTextInput" placeholder="نصيحة إسلامية مفيدة..." rows="5"></textarea>
+      <button class="btn btn-gold" style="margin-top:20px;" onclick="publishAdvice()">نشر (+10 أجر)</button>
+    </div>
+  </div>
+
+  <!-- تعديل الملف الشخصي -->
+  <div id="editProfileModal" class="overlay">
+    <div class="overlay-header"><i class="fa-solid fa-arrow-right" onclick="closeEditProfile()"></i> تعديل الملف</div>
+    <div class="overlay-body">
+      <label>الصورة الشخصية</label>
+      <input type="file" id="editProfilePicInput" accept="image/*">
+      <label>الاسم</label>
+      <input type="text" id="editProfileName">
+      <label>السيرة الذاتية</label>
+      <textarea id="editProfileBio" rows="2"></textarea>
+      <label>المدينة</label>
+      <input type="text" id="editProfileCity">
+      <label>الدولة</label>
+      <input type="text" id="editProfileCountry">
+      <button class="btn" onclick="saveProfileChanges()">حفظ التغييرات</button>
+    </div>
+  </div>
+
+  <!-- المراسلة -->
+  <div id="chatOverlay" class="overlay">
+    <div class="overlay-header">
+      <i class="fa-solid fa-arrow-right" onclick="closeChat()"></i>
+      <img id="chatPic" src="" style="width:44px; height:44px; border-radius:50%;" onerror="this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent(document.getElementById('chatName').innerText || 'User') + '&background=0a7e32&color=fff'">
+      <b id="chatName"></b>
+      <span id="onlineStatus"></span>
+    </div>
+    <div id="typingIndicator" class="typing-indicator"></div>
+    <div id="chatMessages" class="overlay-body" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <div class="overlay-footer">
+      <input type="file" id="chatImageInput" accept="image/*" style="display:none;" onchange="sendImageMessage(this.files[0])">
+      <i class="fa-regular fa-image" style="font-size:24px; cursor:pointer; padding:10px;" onclick="document.getElementById('chatImageInput').click()"></i>
+      <input id="chatInput" placeholder="رسالتك..." oninput="setTypingStatus(true)">
+      <button class="btn" style="width:60px;" onclick="sendMessage()"><i class="fa-regular fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <!-- التعليقات -->
+  <div id="commentsOverlay" class="overlay">
+    <div class="overlay-header"><i class="fa-solid fa-arrow-right" onclick="closeComments()"></i> التعليقات</div>
+    <div id="commentsPostView" style="padding:8px;"></div>
+    <div id="commentsList" class="overlay-body"></div>
+    <div class="overlay-footer">
+      <input id="commentInput" placeholder="تعليق...">
+      <button class="btn" style="width:60px;" onclick="submitComment()"><i class="fa-regular fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <!-- البلاغات -->
+  <div id="reportModal" class="overlay">
+    <div class="overlay-header"><i class="fa-solid fa-arrow-right" onclick="closeReport()"></i> إبلاغ</div>
+    <div class="overlay-body">
+      <select id="reportReason"><option>محتوى غير لائق</option><option>مخالف للشريعة</option></select>
+      <button class="btn" style="margin-top:20px; background:var(--red);" onclick="submitReport()">إرسال البلاغ</button>
+    </div>
+  </div>
+
+  <!-- زر إنشاء منشور -->
+  <div style="position:fixed; bottom:90px; right:20px; z-index:150;">
+    <button class="btn" style="width:60px; height:60px; border-radius:30px; padding:0;" onclick="openCreatePost()"><i class="fa-solid fa-plus" style="font-size:24px;"></i></button>
+  </div>
+
+<!-- شريط التنقل -->
+  <div class="bottom-nav">
+    <div class="nav-item active" onclick="openPage('home',this)"><i class="fa-solid fa-house"></i><span>الرئيسية</span></div>
+    <div class="nav-item" onclick="openPage('reels',this)"><i class="fa-regular fa-images"></i><span>ريلز</span></div>
+    <div class="nav-item" onclick="openPage('search',this)"><i class="fa-regular fa-search"></i><span>بحث</span></div>
+    <div class="nav-item" onclick="openPage('inbox',this)"><i class="fa-regular fa-comments"></i><span>الوارد</span></div>
+    <div class="nav-item" onclick="openPage('profile',this)"><i class="fa-regular fa-user"></i><span>حسابي</span></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+
+<script>
+  // ========== تهيئة Firebase ==========
+  const firebaseConfig = {
+    apiKey: "AIzaSyCputZ6t49xHgKG5hzaPgGCl72Vj8yxd_g",
+    authDomain: "gogoto-dfbb4.firebaseapp.com",
+    databaseURL: "https://gogoto-dfbb4-default-rtdb.firebaseio.com",
+    projectId: "gogoto-dfbb4",
+    appId: "1:494284825885:web:27600b80e2089703266df4"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth(), db = firebase.database();
+
+  let currentUser = null;
+  let currentPostId = null, currentChatId = null, currentProfileId = null;
+  let reportTarget = { type: null, id: null };
+  let lastPostKey = null, loadingPosts = false;
+  const POSTS_PER_PAGE = 10;
+
+  // ========== دوال مساعدة (ضغط الصور، التنسيق، الصورة الافتراضية) ==========
+  function compressImage(file, maxWidth = 1200, quality = 0.8) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width, height = img.height;
+          if (width > maxWidth) { height *= maxWidth / width; width = maxWidth; }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function formatTime(ts) { return new Date(ts).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'}); }
+
+  function filterText(t) {
+    if (!t) return '';
+    const badWords = ['سيء', 'شتيمة', 'كلب', 'خنزير'];
+    let filtered = t;
+    badWords.forEach(w => filtered = filtered.replace(new RegExp(w, 'gi'), '***'));
+    return filtered;
+  }
+
+  function getDefaultAvatar(name) {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=0a7e32&color=fff&length=2`;
+  }
+
+  // ========== Skeleton ==========
+  function showSkeleton(containerId, count = 3) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    for (let i=0; i<count; i++) {
+      container.innerHTML += `<div class="skeleton-card"><div class="skeleton-avatar"></div><div class="skeleton-line"></div><div class="skeleton-image"></div></div>`;
+    }
+  }
+
+  // ========== المصادقة ==========
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      initUser();
+      loadPrayerTimes();
+      schedulePrayerNotifications();
+      loadFeed(true);
+      loadStories(); loadReels(); loadAdvice(); loadChatList(); loadSuggestions();
+      applyDarkModePreference();
+      requestNotificationPermission();
+      setupOnlineStatus();
     } else {
-        box.style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
     }
-}
+  });
+  function login() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
 
-async function publishPost() {
-    const txt = document.getElementById('pTxt').value;
-    if(!txt) return alert("اكتب شيئاً أولاً!");
-    
-    await db.ref('posts').push({ 
-        uid: user.uid, 
-        author: user.displayName, 
-        pic: user.photoURL, 
-        text: txt, 
-        template: selectedTpl, 
-        time: Date.now() 
+  function initUser() {
+    const ref = db.ref(`users/${currentUser.uid}`);
+    ref.once('value', snap => {
+      if (!snap.exists()) ref.set({
+        name: currentUser.displayName, pic: currentUser.photoURL || getDefaultAvatar(currentUser.displayName), email: currentUser.email,
+        city: 'مكة المكرمة', country: 'السعودية', bio: 'مسلم يحب الخير', ajr: 0, badges: {}
+      });
     });
-    
-    document.getElementById('pTxt').value = "";
-    selectedTpl = "";
-    updatePreview();
-    openPage('home', document.querySelector('.fa-house'));
-}
-
-// --- نظام الستوري الاحترافي ---
-function addStory() {
-    const st = prompt("اكتب حالتك (ستوري):");
-    if(st) db.ref('stories').push({ uid: user.uid, author: user.displayName, pic: user.photoURL, text: st, time: Date.now() });
-}
-
-function loadStories() {
-    db.ref('stories').limitToLast(15).on('value', s => {
-        const box = document.getElementById('storiesBox');
-        let html = `<div class="story-item" onclick="addStory()">
-                        <div class="story-img add-story"><i class="fa-solid fa-plus"></i></div>
-                        <div class="story-name">إضافتي</div>
-                    </div>`;
-        s.forEach(c => {
-            const st = c.val();
-            // الهروب من علامات الاقتباس لمنع أخطاء الجافاسكريبت
-            const safeText = st.text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-            html += `<div class="story-item" onclick="viewStory('${st.author}', '${st.pic}', '${safeText}')">
-                        <img src="${st.pic}" class="story-img">
-                        <div class="story-name">${st.author}</div>
-                    </div>`;
-        });
-        box.innerHTML = html;
+    ref.on('value', snap => {
+      const d = snap.val() || {};
+      document.getElementById('profilePic').src = d.pic || getDefaultAvatar(d.name);
+      document.getElementById('profileName').innerText = d.name || currentUser.displayName;
+      document.getElementById('profileHandle').innerText = '@' + (d.email || currentUser.email).split('@')[0];
+      document.getElementById('profileCityCountry').innerText = `${d.city || ''}, ${d.country || ''}`;
+      document.getElementById('profileBio').innerText = d.bio || '';
+      document.getElementById('ajrCount').innerText = d.ajr || 0;
+      document.getElementById('ajrProfile').innerText = d.ajr || 0;
+      document.getElementById('ajrProgress').value = (d.ajr || 0) % 100;
+      showBadges(d.badges);
     });
-}
+    updateFollowersUI();
+  }
 
-function viewStory(name, pic, text) {
-    const view = document.getElementById('storyView');
-    const prog = document.getElementById('storyProgress');
-    document.getElementById('storyUserName').innerText = name;
-    document.getElementById('storyUserPic').src = pic;
-    document.getElementById('storyText').innerText = text;
-    
-    view.style.display = 'flex';
-    prog.style.width = '0%';
-    
-    // شريط التقدم 5 ثواني
-    setTimeout(() => { prog.style.transition = '5s linear'; prog.style.width = '100%'; }, 50);
-    window.storyTimeout = setTimeout(closeStory, 5050);
-}
+  function showBadges(badges) {
+    const container = document.getElementById('profileBadges');
+    container.innerHTML = '';
+    if (badges) {
+      Object.keys(badges).forEach(b => container.innerHTML += `<span class="badge">${b}</span>`);
+    }
+  }
 
-function closeStory() {
-    document.getElementById('storyView').style.display = 'none';
-    document.getElementById('storyProgress').style.transition = 'none';
-    clearTimeout(window.storyTimeout);
-}
+  // ========== الوضع الليلي ==========
+  function applyDarkModePreference() {
+    if (localStorage.getItem('darkMode') === 'true') document.body.classList.add('dark-mode');
+    document.getElementById('darkModeToggle')?.classList.toggle('active', document.body.classList.contains('dark-mode'));
+  }
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    document.getElementById('darkModeToggle').classList.toggle('active');
+  }
 
-// --- نظام الإشعارات ---
-function addNotif(targetUid, msg) {
-    if(targetUid === user.uid) return; 
-    db.ref(`notifications/${targetUid}`).push({
-        from: user.displayName,
-        pic: user.photoURL,
-        message: msg,
-        time: Date.now()
+  // ========== أوقات الصلاة والإشعارات ==========
+  let prayerTimings = {};
+  async function loadPrayerTimes() {
+    const city = (await db.ref(`users/${currentUser.uid}/city`).once('value')).val() || 'Mecca';
+    const country = (await db.ref(`users/${currentUser.uid}/country`).once('value')).val() || 'Saudi Arabia';
+    try {
+      const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=${country}`);
+      const data = await res.json();
+      const t = data.data.timings;
+      prayerTimings = t;
+      document.getElementById('prayerTimesList').innerHTML = `الفجر ${t.Fajr} · الظهر ${t.Dhuhr} · العصر ${t.Asr} · المغرب ${t.Maghrib} · العشاء ${t.Isha}`;
+      document.getElementById('nextPrayer').innerText = `الظهر ${t.Dhuhr}`;
+      document.getElementById('prayerCity').innerText = city;
+      schedulePrayerNotifications();
+    } catch(e) { console.warn(e); }
+  }
+
+  function requestNotificationPermission() {
+    if (Notification.permission !== 'granted') Notification.requestPermission();
+  }
+
+  function schedulePrayerNotifications() {
+    if (!prayerTimings) return;
+    const now = new Date();
+    Object.entries(prayerTimings).forEach(([name, timeStr]) => {
+      const [h, m] = timeStr.split(':');
+      const prayerTime = new Date(now);
+      prayerTime.setHours(h, m, 0);
+      if (prayerTime < now) prayerTime.setDate(prayerTime.getDate() + 1);
+      const diff = prayerTime - now;
+      if (diff > 0 && diff < 86400000) {
+        setTimeout(() => {
+          new Notification(`حان موعد صلاة ${name}`, { body: 'حافظ على صلاتك', icon: currentUser.photoURL });
+        }, diff - 60000);
+      }
     });
-}
+  }
 
-function loadNotifications() {
-    db.ref(`notifications/${user.uid}`).on('value', s => {
-        const list = document.getElementById('notifList');
-        list.innerHTML = "";
-        if(!s.exists()) {
-            list.innerHTML = '<div style="text-align:center; padding-top:50px;"><i class="fa-regular fa-bell-slash" style="font-size:50px; color:#334155; margin-bottom:15px;"></i><p style="color:#64748b;">لا توجد إشعارات جديدة</p></div>';
-            return;
-        }
-        Object.values(s.val()).reverse().forEach(n => {
-            list.innerHTML += `
-                <div class="notif-item">
-                    <img src="${n.pic}" style="width:48px; height:48px; border-radius:50%; object-fit:cover;">
-                    <div>
-                        <b style="color:var(--text); font-size:15px;">${n.from}</b> <span style="color:#cbd5e1; font-size:14px;">${n.message}</span>
-                        <div style="font-size:11px; color:#64748b; margin-top:4px;"><i class="fa-regular fa-clock"></i> ${formatTime(n.time)}</div>
-                    </div>
-                </div>`;
-        });
-    });
-}
+  // ========== نظام الأجر والمتابعة ==========
+  function followUser(targetId) {
+    if (targetId === currentUser.uid) return;
+    db.ref(`followers/${targetId}/${currentUser.uid}`).set(true);
+    db.ref(`following/${currentUser.uid}/${targetId}`).set(true);
+    addAjr(targetId, 1);
+    addNotification(targetId, 'تابعك');
+  }
+  function unfollowUser(targetId) {
+    db.ref(`followers/${targetId}/${currentUser.uid}`).remove();
+    db.ref(`following/${currentUser.uid}/${targetId}`).remove();
+  }
+  function addAjr(uid, points) { db.ref(`users/${uid}/ajr`).transaction(ajr => (ajr || 0) + points); }
+  function updateFollowersUI() {
+    db.ref(`followers/${currentUser.uid}`).on('value', s => document.getElementById('followersCount').innerText = s.numChildren());
+    db.ref(`following/${currentUser.uid}`).on('value', s => document.getElementById('followingCount').innerText = s.numChildren());
+  }
 
-// --- عرض المنشورات والتفاعلات ---
-function loadFeed() {
-    db.ref('posts').on('value', s => {
-        const feed = document.getElementById('feed');
-        feed.innerHTML = ""; 
-        Object.entries(s.val() || {}).reverse().forEach(([pid, p]) => {
-            feed.innerHTML += createPostHTML(pid, p);
-        });
-    });
-}
-
-function createPostHTML(pid, p, isCommentPage = false) {
-    const likesCount = p.likes ? Object.keys(p.likes).length : 0;
-    const isLiked = p.likes && p.likes[user.uid] ? 'fa-solid liked' : 'fa-regular';
-    const commCount = p.comments ? Object.keys(p.comments).length : 0;
+  // ========== المنشورات (Pagination + ضغط) ==========
+  function openCreatePost() { document.getElementById('createPostModal').style.display = 'flex'; }
+  function closeCreatePost() { document.getElementById('createPostModal').style.display = 'none'; }
+  async function publishPost() {
+    const text = document.getElementById('postTextInput').value;
+    const file = document.getElementById('postImageInput').files[0];
+    const template = document.getElementById('postTemplate').value;
+    const intention = document.getElementById('postIntention').value;
+    if (!text && !file) return alert('أضف محتوى');
+    const postData = {
+      uid: currentUser.uid, author: currentUser.displayName, pic: currentUser.photoURL || getDefaultAvatar(currentUser.displayName),
+      text: filterText(text), template, intention, time: Date.now(), reports: 0
+    };
+    if (file) {
+      const compressed = await compressImage(file);
+      postData.image = compressed;
+    }
+    db.ref('posts').push(postData);
+    closeCreatePost();
+    addAjr(currentUser.uid, file ? 5 : 3);
+    loadFeed(true);
+  }
+  function deletePost(pid) {
+    if (confirm('حذف المنشور؟')) {
+      db.ref(`posts/${pid}`).remove();
+      loadFeed(true);
+    }
+  }
+  function loadFeed(reset = true) {
+    if (reset) { document.getElementById('feedContainer').innerHTML = ''; lastPostKey = null; }
+    if (loadingPosts) return; loadingPosts = true;
+    showSkeleton('feedContainer', 3);
     
+    let query = db.ref('posts').orderByKey().limitToLast(POSTS_PER_PAGE);
+    if (lastPostKey) query = query.endBefore(lastPostKey);
+    
+    db.ref(`blocks/${currentUser.uid}`).once('value', blockSnap => {
+      const blocked = blockSnap.val() || {};
+      query.once('value', snap => {
+        const feed = document.getElementById('feedContainer');
+        if (reset) feed.innerHTML = '';
+        const arr = []; snap.forEach(c => { if (c.val().reports < 10 && !blocked[c.val().uid]) arr.push({key:c.key, ...c.val()}); });
+        if (arr.length > 0) lastPostKey = arr[0].key;
+        arr.reverse().forEach(p => feed.innerHTML += createPostHTML(p.key, p));
+        loadingPosts = false;
+      });
+    });
+  }
+  window.onscroll = () => {
+    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500 && !loadingPosts) loadFeed(false);
+  };
+
+  function createPostHTML(pid, p) {
+    const likes = p.likes ? Object.keys(p.likes).length : 0;
+    const liked = p.likes && p.likes[currentUser.uid];
+    const isOwner = p.uid === currentUser.uid;
+    const pic = p.pic || getDefaultAvatar(p.author);
     return `
-    <div class="card" ${isCommentPage ? 'style="border:none; box-shadow:none; margin:0; border-radius:0;"' : ''}>
-        <div class="p-head">
-            <img src="${p.pic}"> 
-            <div class="p-head-info">
-                <b>${p.author}</b>
-                <span class="p-time">${formatTime(p.time)}</span>
-            </div>
+      <div class="post-card">
+        <div class="post-header">
+          <img src="${pic}" loading="lazy" onclick="viewProfile('${p.uid}')" onerror="this.src='${getDefaultAvatar(p.author)}'">
+          <div class="post-author">
+            <b onclick="viewProfile('${p.uid}')">${p.author}</b>
+            <div class="post-location"><i class="fa-regular fa-location-dot"></i> ${p.location || ''}</div>
+            <div class="post-time">${formatTime(p.time)} · ${p.intention}</div>
+          </div>
+          ${isOwner ? `<i class="fa-regular fa-trash-can" onclick="deletePost('${pid}')" style="cursor:pointer; color:var(--red);"></i>` : ''}
+          <i class="fa-regular fa-ellipsis-vertical" onclick="openReport('post','${pid}')"></i>
         </div>
-        <div class="p-text ${p.template || ''}">${p.text}</div>
-        <div class="p-actions">
-            <div class="action-btn" onclick="toggleLike('${pid}')">
-                <i class="fa-heart ${isLiked}"></i> <span>${likesCount}</span>
-            </div>
-            <div class="action-btn" onclick="openComments('${pid}')">
-                <i class="fa-regular fa-comment"></i> <span>${commCount}</span>
-            </div>
-            <div class="action-btn" onclick="sharePost('${p.text}')">
-                <i class="fa-solid fa-share-nodes"></i>
-            </div>
+        ${p.text ? `<div class="post-text ${p.template || ''}">${filterText(p.text)}</div>` : ''}
+        ${p.image ? `<div class="post-image"><img src="${p.image}" loading="lazy"></div>` : ''}
+        <div class="post-actions">
+          <div class="action-btn" onclick="toggleLike('${pid}')"><i class="fa-heart ${liked?'fa-solid liked':'fa-regular'}"></i> ${likes}</div>
+          <div class="action-btn" onclick="openComments('${pid}')"><i class="fa-regular fa-comment"></i> ${p.comments?Object.keys(p.comments).length:0}</div>
+          <div class="action-btn" onclick="sharePost()"><i class="fa-regular fa-share-from-square"></i></div>
         </div>
-    </div>`;
-}
+      </div>`;
+  }
+  function toggleLike(pid) {
+    const ref = db.ref(`posts/${pid}/likes/${currentUser.uid}`);
+    ref.once('value', s => s.exists() ? ref.remove() : ref.set(true));
+    db.ref(`posts/${pid}`).once('value', s => { if (!s.val().likes?.[currentUser.uid]) addNotification(s.val().uid, 'أعجب بمنشورك'); });
+  }
 
-function loadUserPosts(uid, divId) {
-    db.ref('posts').once('value', s => {
-        const div = document.getElementById(divId); div.innerHTML = "";
-        Object.entries(s.val() || {}).reverse().forEach(([pid, p]) => {
-            if(p.uid === uid) div.innerHTML += createPostHTML(pid, p);
-        });
+  // ========== ريلز ==========
+  function loadReels() {
+    db.ref('posts').on('value', snap => {
+      const cont = document.getElementById('reelsContainer'); cont.innerHTML = '';
+      snap.forEach(c => { if (c.val().image && c.val().reports < 10) cont.innerHTML += createPostHTML(c.key, c.val()); });
     });
-}
+  }
 
-// المشاركة
-function sharePost(txt) {
-    if (navigator.share) {
-        navigator.share({ title: 'منشور من GoGOTo', text: txt });
-    } else {
-        alert("المشاركة غير مدعومة في هذا المتصفح");
+  // ========== النصائح ==========
+  function openAddAdvice() { document.getElementById('addAdviceModal').style.display = 'flex'; }
+  function closeAddAdvice() { document.getElementById('addAdviceModal').style.display = 'none'; }
+  function publishAdvice() {
+    const text = document.getElementById('adviceTextInput').value;
+    if (!text) return;
+    db.ref('advice').push({ uid: currentUser.uid, author: currentUser.displayName, pic: currentUser.photoURL || getDefaultAvatar(currentUser.displayName), text: filterText(text), time: Date.now(), reports: 0, likes: {} });
+    addAjr(currentUser.uid, 10);
+    closeAddAdvice();
+  }
+  function loadAdvice() {
+    db.ref('advice').on('value', snap => {
+      const list = document.getElementById('adviceList'); list.innerHTML = '';
+      const arr = []; snap.forEach(c => { if (c.val().reports < 10) arr.push({key:c.key, ...c.val()}); });
+      arr.reverse().forEach(a => {
+        const pic = a.pic || getDefaultAvatar(a.author);
+        list.innerHTML += `
+          <div class="advice-card" style="background:var(--card); padding:16px; border-radius:20px; margin-bottom:12px; border-right:6px solid var(--gold);">
+            <div style="display:flex; gap:10px;"><img src="${pic}" style="width:36px;height:36px;border-radius:50%;" onclick="viewProfile('${a.uid}')" onerror="this.src='${getDefaultAvatar(a.author)}'"> <b onclick="viewProfile('${a.uid}')">${a.author}</b></div>
+            <p style="margin:12px 0;">${a.text}</p>
+            <div style="display:flex; justify-content:space-between;">
+              <span onclick="likeAdvice('${a.key}')"><i class="fa-heart ${a.likes?.[currentUser.uid]?'fa-solid liked':'fa-regular'}"></i> ${a.likes?Object.keys(a.likes).length:0}</span>
+              <span class="ajr-badge" style="background:var(--gold); padding:4px 12px; border-radius:30px;">+10 أجر</span>
+              <i class="fa-regular fa-flag" onclick="openReport('advice','${a.key}')"></i>
+            </div>
+          </div>`;
+      });
+    });
+  }
+  function likeAdvice(aid) {
+    const ref = db.ref(`advice/${aid}/likes/${currentUser.uid}`);
+    ref.once('value', s => s.exists() ? ref.remove() : ref.set(true));
+  }
+
+  // ========== البلاغات والحظر ==========
+  function openReport(type, id) { reportTarget = {type, id}; document.getElementById('reportModal').style.display = 'flex'; }
+  function closeReport() { document.getElementById('reportModal').style.display = 'none'; }
+  function submitReport() {
+    const reason = document.getElementById('reportReason').value;
+    db.ref(`${reportTarget.type}/${reportTarget.id}/reports`).transaction(r => {
+      const newVal = (r||0)+1;
+      if (newVal >= 10) db.ref(`${reportTarget.type}/${reportTarget.id}`).update({ hidden: true });
+      return newVal;
+    });
+    closeReport();
+  }
+  function blockUser(targetId) {
+    if (confirm('حظر هذا المستخدم؟')) {
+      db.ref(`blocks/${currentUser.uid}/${targetId}`).set(true);
+      alert('تم الحظر');
     }
-}
+  }
+  function manageBlockedUsers() { alert('قائمة الحظر قيد التطوير'); }
 
-// الإعجاب
-function toggleLike(id) { 
-    const ref = db.ref(`posts/${id}`);
-    ref.once('value', s => {
-        const post = s.val();
-        const likeRef = db.ref(`posts/${id}/likes/${user.uid}`);
-        likeRef.once('value', l => {
-            if(l.exists()) {
-                likeRef.remove();
-            } else {
-                likeRef.set(true);
-                addNotif(post.uid, "أعجب بمنشورك");
-            }
+  // ========== المراسلة + صندوق الوارد ==========
+  function setupOnlineStatus() {
+    const onlineRef = db.ref(`users/${currentUser.uid}/online`);
+    onlineRef.set(true);
+    onlineRef.onDisconnect().remove();
+  }
+  function loadChatList() {
+    db.ref(`following/${currentUser.uid}`).on('value', followSnap => {
+      const list = document.getElementById('chatList'); list.innerHTML = '';
+      followSnap.forEach(f => {
+        db.ref(`users/${f.key}`).once('value', u => {
+          const user = u.val() || {};
+          const pic = user.pic || getDefaultAvatar(user.name || 'User');
+          db.ref(`users/${f.key}/online`).on('value', s => {
+            const online = s.val();
+            list.innerHTML += `<div class="post-card" style="padding:16px; display:flex; align-items:center; gap:12px;" onclick="startChat('${f.key}','${user.name || 'مستخدم'}','${pic}')">
+              <img src="${pic}" style="width:48px; height:48px; border-radius:50%;" onerror="this.src='${getDefaultAvatar(user.name)}'"> <b>${user.name || 'مستخدم'}</b> <span class="online-dot" style="background:${online?'#4caf50':'#ccc'};"></span>
+            </div>`;
+          });
         });
+      });
     });
-}
+  }
+  function startChat(uid, name, pic) {
+    currentChatId = currentUser.uid < uid ? `${currentUser.uid}_${uid}` : `${uid}_${currentUser.uid}`;
+    document.getElementById('chatName').innerText = name;
+    document.getElementById('chatPic').src = pic || getDefaultAvatar(name);
+    document.getElementById('chatOverlay').style.display = 'flex';
+    db.ref(`users/${uid}/online`).on('value', s => {
+      document.getElementById('onlineStatus').innerHTML = s.val() ? '<span class="online-dot"></span> متصل' : '';
+    });
+    db.ref(`chats/${currentChatId}/typing/${uid}`).on('value', s => {
+      document.getElementById('typingIndicator').innerText = s.val() ? 'يكتب الآن...' : '';
+    });
+    db.ref(`chats/${currentChatId}`).on('value', snap => {
+      const box = document.getElementById('chatMessages'); box.innerHTML = '';
+      snap.forEach(m => {
+        const msg = m.val();
+        if (msg.type === 'image') {
+          box.innerHTML += `<div class="chat-message ${msg.uid===currentUser.uid?'sent':'received'}"><div class="chat-bubble"><img src="${msg.image}" class="chat-image"></div></div>`;
+        } else {
+          box.innerHTML += `<div class="chat-message ${msg.uid===currentUser.uid?'sent':'received'}"><div class="chat-bubble">${msg.text}<div class="chat-time">${formatTime(msg.time)}</div></div></div>`;
+        }
+      });
+      box.scrollTop = box.scrollHeight;
+    });
+  }
+  function setTypingStatus(isTyping) {
+    if (!currentChatId) return;
+    const ref = db.ref(`chats/${currentChatId}/typing/${currentUser.uid}`);
+    if (isTyping) { ref.set(true); setTimeout(() => ref.remove(), 3000); }
+    else ref.remove();
+  }
+  function sendMessage() {
+    const inp = document.getElementById('chatInput');
+    if (inp.value && currentChatId) {
+      db.ref(`chats/${currentChatId}`).push({ uid: currentUser.uid, text: filterText(inp.value), time: Date.now() });
+      inp.value = '';
+      setTypingStatus(false);
+    }
+  }
+  async function sendImageMessage(file) {
+    if (!file || !currentChatId) return;
+    const compressed = await compressImage(file, 800);
+    db.ref(`chats/${currentChatId}`).push({ uid: currentUser.uid, type: 'image', image: compressed, time: Date.now() });
+  }
+  function closeChat() { document.getElementById('chatOverlay').style.display = 'none'; }
 
-// --- صفحة التعليقات المستقلة ---
-function openComments(pid) {
+// ========== التعليقات ==========
+  function openComments(pid) {
     currentPostId = pid;
-    document.getElementById('commentsPage').style.display = 'flex';
-    
-    db.ref(`posts/${pid}`).once('value', s => {
-        document.getElementById('mainPostView').innerHTML = createPostHTML(pid, s.val(), true);
-    });
-
+    document.getElementById('commentsOverlay').style.display = 'flex';
+    db.ref(`posts/${pid}`).once('value', s => document.getElementById('commentsPostView').innerHTML = createPostHTML(pid, s.val()));
     db.ref(`posts/${pid}/comments`).on('value', s => {
-        const list = document.getElementById('commentsList');
-        list.innerHTML = "";
-        if(!s.exists()){
-            list.innerHTML = '<p style="text-align:center; color:#64748b; margin-top:20px;">كن أول من يعلق!</p>';
-        } else {
-            s.forEach(c => {
-                const comm = c.val();
-                list.innerHTML += `
-                <div class="comm-item">
-                    <img src="${comm.pic}">
-                    <div class="comm-bubble">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <b style="font-size:14px; color:var(--neon);">${comm.author}</b>
-                            <span style="font-size:10px; color:#64748b;">${formatTime(comm.time)}</span>
-                        </div>
-                        <p style="font-size:15px; margin-top:5px; color:#e2e8f0;">${comm.text}</p>
-                    </div>
-                </div>`;
-            });
-            list.scrollTop = list.scrollHeight;
-        }
+      const list = document.getElementById('commentsList'); list.innerHTML = '';
+      const arr = []; s.forEach(c => arr.push({key:c.key, ...c.val()}));
+      arr.sort((a,b) => b.time - a.time).forEach(c => {
+        const pic = c.pic || getDefaultAvatar(c.author);
+        list.innerHTML += `<div style="margin-bottom:16px; display:flex; gap:10px;">
+          <img src="${pic}" style="width:32px;height:32px;border-radius:50%;" onclick="viewProfile('${c.uid}')" onerror="this.src='${getDefaultAvatar(c.author)}'">
+          <div style="flex:1;"><b onclick="viewProfile('${c.uid}')">${c.author}</b> ${filterText(c.text)}
+            <div style="display:flex; gap:12px; margin-top:6px;">
+              <span onclick="likeComment('${pid}','${c.key}')"><i class="fa-heart ${c.likes?.[currentUser.uid]?'fa-solid liked':'fa-regular'}"></i> ${c.likes?Object.keys(c.likes).length:0}</span>
+              <span style="font-size:12px;">${formatTime(c.time)}</span>
+            </div>
+          </div>
+        </div>`;
+      });
     });
-}
-
-function closeComments() {
-    document.getElementById('commentsPage').style.display = 'none';
-    currentPostId = null;
-}
-
-function sendComment() {
-    const inp = document.getElementById('newCommTxt');
-    if(inp.value && currentPostId) { 
-        db.ref(`posts/${currentPostId}`).once('value', s => {
-            const post = s.val();
-            db.ref(`posts/${currentPostId}/comments`).push({ 
-                author: user.displayName, 
-                pic: user.photoURL,
-                text: inp.value,
-                time: Date.now()
-            });
-            addNotif(post.uid, `علق على منشورك: "${inp.value.substring(0, 15)}..."`);
-            inp.value = ""; 
-        });
+  }
+  function submitComment() {
+    const inp = document.getElementById('commentInput');
+    if (inp.value && currentPostId) {
+      db.ref(`posts/${currentPostId}/comments`).push({
+        uid: currentUser.uid, author: currentUser.displayName, pic: currentUser.photoURL || getDefaultAvatar(currentUser.displayName), text: filterText(inp.value), time: Date.now(), likes: {}
+      });
+      inp.value = '';
     }
-}
+  }
+  function likeComment(pid, cid) {
+    const ref = db.ref(`posts/${pid}/comments/${cid}/likes/${currentUser.uid}`);
+    ref.once('value', s => s.exists() ? ref.remove() : ref.set(true));
+  }
+  function closeComments() { document.getElementById('commentsOverlay').style.display = 'none'; }
 
-// --- الشات الاحترافي ---
-function searchUsers(val) {
-    db.ref('users').once('value', s => {
-        const list = document.getElementById('uList'); list.innerHTML = "";
-        s.forEach(c => {
-            const u = c.val();
-            if(u.name.toLowerCase().includes(val.toLowerCase()) && u.uid !== user.uid) {
-                list.innerHTML += `
-                <div class="card" style="padding:15px; display:flex; gap:15px; align-items:center; cursor:pointer; margin-bottom:10px;" onclick="startChat('${u.uid}','${u.name}','${u.pic}')">
-                    <img src="${u.pic}" style="width:50px; height:50px; border-radius:50%; border:2px solid rgba(255,255,255,0.1);"> 
-                    <div>
-                        <b style="font-size:17px; color:#fff;">${u.name}</b>
-                        <p style="font-size:13px; color:#64748b; margin-top:3px;"><i class="fa-regular fa-comment"></i> اضغط للمراسلة</p>
-                    </div>
-                </div>`;
-            }
+  // ========== الملف الشخصي والبحث والإحصائيات ==========
+  function viewProfile(uid) {
+    currentProfileId = uid;
+    db.ref(`users/${uid}`).once('value', snap => {
+      const u = snap.val() || {};
+      const pic = u.pic || getDefaultAvatar(u.name);
+      document.getElementById('profilePic').src = pic;
+      document.getElementById('profileName').innerText = u.name || 'مستخدم';
+      document.getElementById('profileCityCountry').innerText = `${u.city||''}, ${u.country||''}`;
+      document.getElementById('profileBio').innerText = u.bio||'';
+      document.getElementById('ajrProfile').innerText = u.ajr||0;
+      showBadges(u.badges);
+      const btnDiv = document.getElementById('followBtnContainer');
+      if (uid === currentUser.uid) {
+        btnDiv.innerHTML = `<button class="btn" onclick="openPage('settings')">تعديل</button>`;
+      } else {
+        db.ref(`followers/${uid}/${currentUser.uid}`).on('value', s => {
+          const isFollowing = s.exists();
+          btnDiv.innerHTML = `
+            <button class="btn ${isFollowing?'btn-outline':''}" onclick="${isFollowing?`unfollowUser('${uid}')`:`followUser('${uid}')`}">${isFollowing?'إلغاء الأجر':'أجر 🤲'}</button>
+            <button class="btn btn-gold" style="margin-top:8px;" onclick="startChat('${uid}','${u.name}','${pic}')">مراسلة</button>
+            <button class="btn-outline" style="margin-top:8px;" onclick="blockUser('${uid}')">حظر</button>`;
         });
+      }
+      loadProfileStats(uid);
+      db.ref('posts').orderByChild('uid').equalTo(uid).on('value', snap => {
+        const list = document.getElementById('myPostsList'); list.innerHTML = '';
+        snap.forEach(c => list.innerHTML += createPostHTML(c.key, c.val()));
+      });
+      openPage('profile');
     });
-}
-
-function startChat(id, name, pic) {
-    currentChatID = user.uid < id ? `${user.uid}_${id}` : `${id}_${user.uid}`;
-    document.getElementById('cName').innerText = name;
-    document.getElementById('cPic').src = pic;
-    document.getElementById('chatWin').style.display = 'flex';
-    
-    db.ref('chats/' + currentChatID).on('value', s => {
-        const box = document.getElementById('msgBox'); box.innerHTML = "";
-        if(!s.exists()){
-             box.innerHTML = `<div style="text-align:center; color:#64748b; margin-top:50px; background:rgba(0,0,0,0.2); padding:20px; border-radius:20px; margin-inline:auto; max-width:80%;">
-                                <i class="fa-regular fa-hand-wave" style="font-size:30px; margin-bottom:10px;"></i>
-                                <p>قل مرحباً لـ ${name}</p>
-                             </div>`;
-        } else {
-            s.forEach(snap => {
-                const m = snap.val();
-                box.innerHTML += `
-                <div class="msg-wrap ${m.uid===user.uid?'me':'them'}">
-                    <div class="msg">${m.text}</div>
-                    <div class="msg-time">${formatTime(m.time)}</div>
-                </div>`;
-            });
+  }
+  function loadProfileStats(uid) {
+    db.ref('posts').orderByChild('uid').equalTo(uid).once('value', snap => {
+      let posts = 0, likes = 0;
+      snap.forEach(p => { posts++; likes += Object.keys(p.val().likes || {}).length; });
+      document.getElementById('statsPosts').innerText = posts;
+      document.getElementById('statsLikes').innerText = likes;
+      if (posts >= 10) awardBadge(uid, 'ناشط');
+      if (likes >= 100) awardBadge(uid, 'محبوب');
+    });
+  }
+  function awardBadge(uid, badge) {
+    db.ref(`users/${uid}/badges/${badge}`).set(true);
+  }
+  function performSearch(query) {
+    if (!query) { document.getElementById('searchResults').innerHTML = ''; return; }
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = '<p>جاري البحث...</p>';
+    // بحث في المستخدمين
+    db.ref('users').once('value', usersSnap => {
+      let html = '<h4>المستخدمون</h4>';
+      usersSnap.forEach(u => {
+        const user = u.val();
+        if (user.name && user.name.includes(query)) {
+          const pic = user.pic || getDefaultAvatar(user.name);
+          html += `<div class="post-card" style="padding:12px; display:flex; align-items:center; gap:10px;" onclick="viewProfile('${u.key}')">
+            <img src="${pic}" style="width:40px;height:40px;border-radius:50%;" onerror="this.src='${getDefaultAvatar(user.name)}'">
+            <div><b>${user.name}</b><br><small>@${(user.email||'').split('@')[0]}</small></div>
+          </div>`;
         }
-        box.scrollTop = box.scrollHeight;
+      });
+      // بحث في المنشورات
+      db.ref('posts').once('value', postsSnap => {
+        html += '<h4 style="margin-top:20px;">المنشورات</h4>';
+        postsSnap.forEach(p => {
+          const post = p.val();
+          if (post.text && post.text.includes(query) && post.reports < 10) {
+            html += createPostHTML(p.key, post);
+          }
+        });
+        resultsDiv.innerHTML = html || '<p>لا توجد نتائج</p>';
+      });
     });
-}
+  }
+  function loadSuggestions() {
+    db.ref('users').once('value', snap => {
+      const users = []; snap.forEach(u => { if (u.key !== currentUser.uid) users.push({id: u.key, ...u.val()}); });
+      const suggested = users.sort(() => 0.5 - Math.random()).slice(0,5);
+      const container = document.getElementById('suggestionsContainer');
+      container.innerHTML = '<span style="font-weight:bold;">اقتراحات لك:</span>';
+      suggested.forEach(u => {
+        const pic = u.pic || getDefaultAvatar(u.name);
+        container.innerHTML += `<div style="text-align:center; cursor:pointer;" onclick="viewProfile('${u.id}')"><img src="${pic}" style="width:48px;height:48px;border-radius:50%;" onerror="this.src='${getDefaultAvatar(u.name)}'"><br><small>${u.name}</small></div>`;
+      });
+    });
+  }
 
-function closeChat() { document.getElementById('chatWin').style.display='none'; }
-
-function sendMsg() {
-    const inp = document.getElementById('msgInp');
-    if(inp.value && currentChatID) {
-        db.ref('chats/'+currentChatID).push({ uid:user.uid, text:inp.value, time:Date.now() });
-        inp.value = "";
+  // ========== تعديل الملف ==========
+  function openEditProfile() {
+    db.ref(`users/${currentUser.uid}`).once('value', snap => {
+      const d = snap.val() || {};
+      document.getElementById('editProfileName').value = d.name || '';
+      document.getElementById('editProfileBio').value = d.bio || '';
+      document.getElementById('editProfileCity').value = d.city || '';
+      document.getElementById('editProfileCountry').value = d.country || '';
+      document.getElementById('editProfileModal').style.display = 'flex';
+    });
+  }
+  function closeEditProfile() { document.getElementById('editProfileModal').style.display = 'none'; }
+  async function saveProfileChanges() {
+    const file = document.getElementById('editProfilePicInput').files[0];
+    const name = document.getElementById('editProfileName').value;
+    const bio = document.getElementById('editProfileBio').value;
+    const city = document.getElementById('editProfileCity').value;
+    const country = document.getElementById('editProfileCountry').value;
+    const updates = { name, bio, city, country };
+    if (file) {
+      const compressed = await compressImage(file, 800, 0.7);
+      updates.pic = compressed;
     }
-}
+    await db.ref(`users/${currentUser.uid}`).update(updates);
+    closeEditProfile();
+    loadPrayerTimes();
+    // تحديث واجهة البروفايل فوراً
+    initUser();
+  }
 
-function loadUsers() { searchUsers(""); }
-</script>  
-</body>  
+  // ========== دوال مساعدة أخرى ==========
+  function addNotification(uid, msg) { db.ref(`notifications/${uid}`).push({ from: currentUser.displayName, msg, time: Date.now() }); }
+  function loadNotifications() {
+    db.ref(`notifications/${currentUser.uid}`).on('value', snap => {
+      const list = document.getElementById('notifList'); list.innerHTML = '';
+      const arr = []; snap.forEach(n => arr.push(n.val()));
+      arr.reverse().forEach(n => list.innerHTML += `<div class="post-card" style="padding:12px;"><b>${n.from}</b> ${n.msg}</div>`);
+    });
+  }
+  function startDhikr() { let c = prompt('عدد التسبيحات'); if(c) addAjr(currentUser.uid, Math.floor(+c/10)); }
+  function sharePost() { alert('مشاركة'); }
+  function loadStories() {}
+  function changeLocation() { openEditProfile(); }
+  function changeLanguage() { alert('اللغة العربية'); }
+  function openPage(pageId, el) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+    if (el) { document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active')); el.classList.add('active'); }
+    if (pageId === 'notifications') loadNotifications();
+    if (pageId === 'islamic') { loadPrayerTimes(); loadAdvice(); }
+    if (pageId === 'inbox') loadChatList();
+    if (pageId === 'search') document.getElementById('searchInput').focus();
+  }
+</script>
+</body>
 </html>
